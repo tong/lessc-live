@@ -1,0 +1,9 @@
+-neko bin/lessc-live.n
+-main Main
+-cp src
+-lib om.fs
+-lib om.less
+-lib om.term
+-lib hxargs
+-dce full
+-debug

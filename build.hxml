@@ -1,4 +1,5 @@
--neko bin/lessc-live.n
+#-neko bin/lessc-live.n
+-hl lessc-live.hl
 -main Main
 -cp src
 -lib om.fs

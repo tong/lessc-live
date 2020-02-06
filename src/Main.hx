@@ -1,5 +1,6 @@
 
 import om.less.Lessc;
+import om.Term;
 import om.term.Symbol;
 import sys.FileSystem;
 import sys.io.Process;
@@ -19,13 +20,15 @@ class Main {
 		Sys.exit( code );
 	}
 
-	static function watch( files : Array<String> ) : String {
+	static function watch( files : Array<String> ) {
 		var args = ['-e','close_write','--format','%w'].concat( files );
-		var inotifywait = new Process( 'inotifywait', args );
-		return switch inotifywait.exitCode() {
-		case 0: inotifywait.stdout.readAll().toString().trim();
-		default: inotifywait.stderr.readAll().toString().trim();
-		}
+		var p = new Process( 'inotifywait', args );
+		var e = p.stderr.readAll().toString();
+		if( p.exitCode() != 0 )
+			throw e;
+		var r = p.stdout.readAll().toString().trim();
+		p.close();
+		return r;
 	}
 
 	static function findFiles( path : String ) : Array<String> {
@@ -33,19 +36,27 @@ class Main {
 		function search( dir : String ) {
 			for( f in FileSystem.readDirectory( dir ) ) {
 				var p = '$dir/$f';
-				if( FileSystem.isDirectory( p ) ) search( p ) else {
-					if( f.extension() == 'less' ) found.push( FileSystem.absolutePath( p ) );
-				}
+				if( FileSystem.isDirectory( p ) ) search( p );
+				else if( f.extension() == 'less' ) found.push( FileSystem.absolutePath( p ) );
 			}
 		}
 		search( path );
 		return found;
 	}
 
-	static function compile( lessMain, cssOut, lessParams, lessOptions ) {
+	static function lessc( lessMain, cssOut, lessParams, lessOptions ) {
+		//Term.clear();
 		var args = [lessMain,cssOut].concat( Lessc.getArgs( lessParams, lessOptions ) );
-		print( '[lessc '+args.join(' ')+']' );
+		//print( getTimeString()+' [lessc '+args.join(' ')+']' );
+		print( 'lessc '+args.join(' ') );
 		var r = Lessc.execute( args );
+		/*
+		if( r.code != 0 )
+			return throw r.err;
+		trace(r);
+		return r.out;
+		*/
+
 		switch r.code {
 		case 0:
 			println( ' '+Symbol.tick+' '+r.out.trim() );
@@ -64,7 +75,7 @@ class Main {
 		var cwd = Sys.getCwd();
 		var lessMain : String;
 		var cssOut : String;
-		var lessDir : String;
+		var lessDirs : Array<String>;
 		var lessOptions = new Array<String>();
 
 		var usage : String = null;
@@ -76,12 +87,12 @@ class Main {
 				lessMain = file;
 			},
 			@doc("CSS file to write")
-			["-css"] => function(file:String) {
-				cssOut = file;
+			["-css"] => function(path:String) {
+				cssOut = path;
 			},
 			@doc("Source directory to watch for changes")
 			["-src"] => function(path:String) {
-				lessDir = path;
+				lessDirs = path.split(":");
 			},
 			@doc("lessc options")
 			["--options"] => function(?options:String) {
@@ -112,18 +123,37 @@ class Main {
 		if( args.length == 0 ) exit( 1, usage );
 		argHandler.parse( args );
 
-		var files = [lessMain];
-		if( lessDir != null ) {
-			var found = findFiles( lessDir );
-			files = files.concat( found );
+
+		if( !cssOut.hasExtension() ) {
+			cssOut = cssOut.removeTrailingSlashes()+'/'+lessMain.withoutDirectory().withoutExtension()+'.css';
 		}
 
-		var lessParams = {
-			inlclude_paths: [lessDir]
+		var files = [lessMain];
+
+		var lessParams : om.less.Lessc.Params = {
+			include_paths: []
 		};
 
-		print( getTimeString()+' ' );
-		compile( lessMain, cssOut, lessParams, lessOptions );
+		if( lessDirs != null ) {
+			for( dir in lessDirs ) {
+				if( !FileSystem.exists( dir ) ) {
+					exit( 1, dir+' not found' );
+				}
+				var found = findFiles( dir );
+				files = files.concat( found );
+				lessParams.include_paths.push( dir );
+			}
+			/*
+			var found = findFiles( lessDir );
+			files = files.concat( found );
+			lessParams.inlclude_paths.push( lessDir );
+			*/
+		}
+
+		println( 'Watching '+files.length+' files' );
+
+		//print( getTimeString()+' ' );
+		lessc( lessMain, cssOut, lessParams, lessOptions );
 
 		while( true ) {
 
@@ -132,11 +162,25 @@ class Main {
 				exit( 1, e );
 			}
 
-			print( getTimeString() );
-			print( ' [$mod] ' );
-			compile( lessMain, cssOut, lessParams, lessOptions );
+			println( mod );
+			lessc( lessMain, cssOut, lessParams, lessOptions );
 
-			//Sys.sleep(0.1);
+			/*
+			print( getTimeString() + ' [$mod] ' );
+
+			var result : String = null;
+			try {
+				result = compile( lessMain, cssOut, lessParams, lessOptions );
+			} catch(e:Dynamic) {
+				println(e);
+			}
+
+			if( result != null ) {
+				println( result );
+			}
+			*/
+
+			Sys.sleep( 0.2 );
 		}
 	}
 

@@ -50,10 +50,16 @@ class Main {
 			cssFile = mainLessFile.withoutExtension() + '.css';
 		}
 
+		if( sourcePaths.length == 0 ) {
+			sourcePaths.push( mainLessFile.directory() );
+		}
+
 		lessc( mainLessFile, cssFile, lessOptions );
 
 		var inotify = new Inotify();
 		var watches = new Array<Int>();
+		var mask = MODIFY | CLOSE_WRITE;
+		/*
 		var mask =
 			ACCESS
 			| MODIFY
@@ -69,10 +75,22 @@ class Main {
 			//| MOVE_SELF
 			//| CLOSE
 			//| MOVE;
-		for( path in sourcePaths ) {
-			println( 'Watching: '+path );
-			watches.push( inotify.addWatch( path, mask ) );
+			*/
+
+		function watchDirectory( dir : String ) {
+			watches.push( inotify.addWatch( dir, mask ) );
+			for( e in FileSystem.readDirectory( dir ) ) {
+				var p = '$dir/$e';
+				if( FileSystem.isDirectory( p ) ) {
+					watchDirectory( p );
+				}
+			}
 		}
+		for( path in sourcePaths ) {
+			println( 'Watching: $path' );
+			watchDirectory(path);
+		}
+
 		var fileModified : String = null;
 		while( true ) {
 			var events = inotify.read();
@@ -82,6 +100,8 @@ class Main {
                         fileModified = e.name;
                     } else if( e.mask & CLOSE_WRITE > 0 ) {
                         if( fileModified != null ) {
+							print( DateTools.format( Date.now(), '%H:%M:%S' ) );
+							print( ' $fileModified ' );
                             lessc( mainLessFile, cssFile, lessOptions );
                             fileModified = null;
                         }
@@ -96,14 +116,13 @@ class Main {
 	static function lessc( lessMain : String, cssOut : String, ?lessOptions : Array<String> ) : Bool {
 		var args = [lessMain,cssOut];
 		if( lessOptions != null ) args = args.concat( lessOptions );
-		print( DateTools.format( Date.now(), '%H:%M:%S ' ) );
 		var timestamp = Sys.time();
 		var proc = new sys.io.Process( 'lessc', args );
 		var code = proc.exitCode( true );
 		switch code {
 		case 0:
 			var time = Std.int( (Sys.time() - timestamp) * 1000) / 1000;
-			println( '✔ ${time}sec $cssOut' );
+			println( '✔ ${time}s $cssOut' );
 		default:
 			println( proc.stderr.readAll().toString() );
 		}

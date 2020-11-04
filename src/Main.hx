@@ -20,14 +20,14 @@ class Main {
 		var usage : String = null;
 		var argHandler = hxargs.Args.generate([
 			@doc("less index file")["-main","-m"] => (file:String) -> mainLessFile = file, //FileSystem.fullPath(file),
-			@doc("css file to write")["-css","-out"] => (path:String) -> cssFile = path,
-			@doc("paths to watch for changes")["-src"] => (path:String) -> {
+			@doc("css file to write")["-css","-c"] => (path:String) -> cssFile = path,
+			@doc("paths to watch for changes")["-src","-s"] => (path:String) -> {
 				sourcePaths = path.split(":").map( p -> FileSystem.fullPath(p) );
 			},
-			@doc("lessc options")["--options"] => (?options:String) -> {
+			@doc("lessc options")["-options","-opts"] => (?options:String) -> {
 				if( options != null ) lessOptions = options.split(':');
 			},
-			["--help","-h"] => () -> exit( 0, usage ),
+			["--help","-help","-h"] => () -> exit( 0, usage ),
 			_ => (arg:String) -> exit( 1, 'Unknown argument [$arg]' )
 		]);
 		usage = argHandler.getDoc();

@@ -1,9 +1,7 @@
 -hl lessc-live.hl
 -main Main
 -cp src
--lib om.fs
--lib om.less
--lib om.term
 -lib hxargs
+-lib inotify
 -dce full
--debug
+-D analyzer-optimize

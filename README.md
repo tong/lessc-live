@@ -1,13 +1,14 @@
 
 LESSC-LIVE
 ==========
-Wrapper to live build less→css
+Live lessc.
+
 
 ## Usage
-```sh
+```
 lessc-live --help
-[-main] <file>        : Main less file
-[-css] <file>         : CSS file to write
-[-src] <path>         : Source directory to watch for changes
+[-main | -m] <file>   : less index file
+[-css | -out] <path>  : css file to write
+[-src] <path>         : paths to watch for changes
 [--options] <options> : lessc options
 ```

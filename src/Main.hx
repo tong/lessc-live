@@ -41,24 +41,29 @@ class Main {
 			else exit( 1, 'missing -main param' );
 			mainLessFile = FileSystem.fullPath(mainLessFile);
 		} else {
+			mainLessFile = FileSystem.fullPath(mainLessFile);
 			if( !FileSystem.exists( mainLessFile ) )
 				exit( 1, 'Main less file not found: $mainLessFile' );
-			mainLessFile = FileSystem.fullPath(mainLessFile);
 		}
 
 		if( cssFile == null ) {
 			cssFile = mainLessFile.withoutExtension() + '.css';
 		}
 
+		lessOptions.push( '--include-path='+sourcePaths.join(':') );
+
 		if( sourcePaths.length == 0 ) {
 			sourcePaths.push( mainLessFile.directory() );
 		}
 
-		lessc( mainLessFile, cssFile, lessOptions );
+
+		// TODO Get list of dependencies
+		//lessc style/index.less assets/style.css -M
 
 		var inotify = new Inotify();
 		var watches = new Array<Int>();
 		var mask = MODIFY | CLOSE_WRITE;
+
 		/*
 		var mask =
 			ACCESS
@@ -90,6 +95,8 @@ class Main {
 			println( 'Watching: $path' );
 			watchDirectory(path);
 		}
+
+		lessc( mainLessFile, cssFile, lessOptions );
 
 		var fileModified : String = null;
 		while( true ) {

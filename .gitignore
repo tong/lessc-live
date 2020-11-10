@@ -1,4 +1,6 @@
 _*
 *.hl
+*.n
 *.hdll
 bin/
+test/

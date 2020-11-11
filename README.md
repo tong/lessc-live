@@ -1,19 +1,22 @@
 
 LESSC-LIVE
 ==========
-Live lessc.
+Live less→css build tool.
+
+
+NOTE: Requires [inotify](https://github.com/tong/hxinotify) which is only available on linux.
 
 
 ## Usage
-```
-lessc-live --help
-[-main | -m] <file>   : less index file
-[-css | -out] <path>  : css file to write
-[-src] <path>         : paths to watch for changes
-[--options] <options> : lessc options
+```sh
+neko lessc-live.n
+[-main | -m] <file>          : less index file
+[-css | -c] <path>           : css file to write
+[-src | -s] <path>           : paths to watch for changes (seperated by :)
+[-options | -opts] <options> : lessc options (seperated by :)
 ```
 
 ### Example
-```
-hl lessc-live.hl -main styles/index.less -css style.css -src styles:/home/tong/dev/lib/enron/src/enron -options --source-map:--clean-css='--s1 --advanced'
+```sh
+neko lessc-live.n -main index.less -css style.css -src ./styles:path/to/a/less/lib -options --source-map:--clean-css='--s1 --advanced'
 ```

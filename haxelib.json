@@ -1,0 +1,15 @@
+{
+	"name": "lessc-live",
+	"url": "https://github.com/tong/lessc-live",
+	"license": "MIT",
+	"classPath": "src",
+	"tags": ["less","lessc","live","inotify","tool"],
+	"description": "Live less→css build tool",
+	"releasenote": "See CHANGELOG",
+	"version": "0.1.0",
+	"contributors": ["tong"],
+	"dependencies": {
+		"hxargs": "",
+		"inotify": ""
+	}
+}

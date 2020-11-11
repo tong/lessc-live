@@ -1,4 +1,5 @@
--hl lessc-live.hl
+#-hl lessc-live.hl
+-neko lessc-live.n
 -main Main
 -cp src
 -lib hxargs

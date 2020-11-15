@@ -9,22 +9,24 @@ using haxe.io.Path;
 
 class Main {
 
+	static var lessFile : String;
+	static var cssFile : String;
+	static var lessOptions : Array<String>;
+
 	static function main() {
 
 		if( Sys.systemName() != 'Linux' ) exit( 1, 'Linux only' );
 
-		var mainLessFile : String = null;
-		var cssFile : String = null;
+		lessOptions = [];
 		var sourcePaths = new Array<String>();
-		var lessOptions = new Array<String>();
 		var usage : String = null;
 		var argHandler = hxargs.Args.generate([
-			@doc("less index file")["-main","-m"] => (file:String) -> mainLessFile = file, //FileSystem.fullPath(file),
+			@doc("less index file")["-main","-m"] => (file:String) -> lessFile = file, //FileSystem.fullPath(file),
 			@doc("css file to write")["-css","-c"] => (path:String) -> cssFile = path,
-			@doc("paths to watch for changes")["-src","-s"] => (path:String) -> {
+			@doc("paths to watch for changes (seperated by :)")["-src","-s"] => (path:String) -> {
 				sourcePaths = path.split(":").map( p -> FileSystem.fullPath(p) );
 			},
-			@doc("lessc options")["-options","-opts"] => (?options:String) -> {
+			@doc("lessc options (seperated by :)")["-options","-opts"] => (?options:String) -> {
 				if( options != null ) lessOptions = options.split(':');
 			},
 			["--help","-help","-h"] => () -> exit( 0, usage ),
@@ -35,27 +37,30 @@ class Main {
 		if( args.length == 0 ) exit( 1, usage );
 		argHandler.parse( args );
 
-		if( mainLessFile == null ) {
-			if( FileSystem.exists( 'index.less' ) ) mainLessFile = 'index.less';
-			else if( FileSystem.exists( 'main.less' ) ) mainLessFile = 'main.less';
+		if( lessFile == null ) {
+			if( FileSystem.exists( 'index.less' ) ) lessFile = 'index.less';
+			else if( FileSystem.exists( 'main.less' ) ) lessFile = 'main.less';
 			else exit( 1, 'missing -main param' );
-			mainLessFile = FileSystem.fullPath(mainLessFile);
+			lessFile = FileSystem.fullPath(lessFile);
 		} else {
-			mainLessFile = FileSystem.fullPath(mainLessFile);
-			if( !FileSystem.exists( mainLessFile ) )
-				exit( 1, 'Main less file not found: $mainLessFile' );
-		}
-
-		if( cssFile == null ) {
-			cssFile = mainLessFile.withoutExtension() + '.css';
+			lessFile = FileSystem.fullPath(lessFile);
+			if( !FileSystem.exists( lessFile ) )
+				exit( 1, 'Main less file not found: $lessFile' );
 		}
 
 		lessOptions.push( '--include-path='+sourcePaths.join(':') );
 
-		if( sourcePaths.length == 0 ) {
-			sourcePaths.push( mainLessFile.directory() );
+		if( cssFile == null ) {
+			cssFile = lessFile.withoutExtension() + '.css';
 		}
 
+		build();
+
+		// ---
+
+		if( sourcePaths.length == 0 ) {
+			sourcePaths.push( lessFile.directory() );
+		}
 
 		// TODO Get list of dependencies
 		//lessc style/index.less assets/style.css -M
@@ -96,8 +101,6 @@ class Main {
 			watchDirectory(path);
 		}
 
-		lessc( mainLessFile, cssFile, lessOptions );
-
 		var fileModified : String = null;
 		while( true ) {
 			var events = inotify.read();
@@ -107,9 +110,8 @@ class Main {
                         fileModified = e.name;
                     } else if( e.mask & CLOSE_WRITE > 0 ) {
                         if( fileModified != null ) {
-							print( DateTools.format( Date.now(), '%H:%M:%S' ) );
-							print( ' $fileModified ' );
-                            lessc( mainLessFile, cssFile, lessOptions );
+							print( DateTools.format( Date.now(), '%H:%M:%S $fileModified / ' ) );
+							build();
                             fileModified = null;
                         }
                     }
@@ -120,21 +122,32 @@ class Main {
 		inotify.close();
 	}
 
-	static function lessc( lessMain : String, cssOut : String, ?lessOptions : Array<String> ) : Bool {
+	static function build() : Bool {
+		var ts = Sys.time();
+		print( lessFile.withoutDirectory()+' → $cssFile ' );
+		var result = lessc( lessFile, cssFile, lessOptions );
+		if( result.code == 0 ) {
+			var time = Std.int( (Sys.time() - ts) * 1000) / 1000;
+			println( '✔ ${time}s' );
+			return true;
+		} else {
+			println( '✖' );
+			println( result.data );
+			return false;
+		}
+	}
+
+	static function lessc( lessMain : String, cssOut : String, ?lessOptions : Array<String> ) : { code : Int, data : String } {
 		var args = [lessMain,cssOut];
 		if( lessOptions != null ) args = args.concat( lessOptions );
-		var timestamp = Sys.time();
 		var proc = new sys.io.Process( 'lessc', args );
 		var code = proc.exitCode( true );
-		switch code {
-		case 0:
-			var time = Std.int( (Sys.time() - timestamp) * 1000) / 1000;
-			println( '✔ ${time}s $cssOut' );
-		default:
-			println( proc.stderr.readAll().toString() );
+		var result = switch code {
+			case 0: proc.stdout.readAll().toString();
+			default: proc.stderr.readAll().toString();
 		}
 		proc.close();
-		return code == 0;
+		return { code: code, data : result };
 	}
 
 	static function exit( code = 0, ?info : String ) {

@@ -24,10 +24,10 @@ alias lessc-live='neko /path/to/lessc-live/lessc-live.n $@'
 ## Usage
 ```sh
 lessc-live
-[-main | -m] <file>          : less index file
-[-css | -c] <path>           : css file to write
-[-src | -s] <path>           : paths to watch for changes (seperated by :)
-[-options | -opts] <options> : lessc options (seperated by :)
+[-main | -m] <file>   : less index file
+[-css | -c] <path>    : css file to write
+[--src] <path>        : paths to watch for changes (seperated by :)
+[--options] <options> : lessc options (seperated by :)
 ```
 
 

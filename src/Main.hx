@@ -23,10 +23,10 @@ class Main {
 		var argHandler = hxargs.Args.generate([
 			@doc("less index file")["-main","-m"] => (file:String) -> lessFile = file, //FileSystem.fullPath(file),
 			@doc("css file to write")["-css","-c"] => (path:String) -> cssFile = path,
-			@doc("paths to watch for changes (seperated by :)")["-src","-s"] => (path:String) -> {
+			@doc("paths to watch for changes (seperated by :)")["--src"] => (path:String) -> {
 				sourcePaths = path.split(":").map( p -> FileSystem.fullPath(p) );
 			},
-			@doc("lessc options (seperated by :)")["-options","-opts"] => (?options:String) -> {
+			@doc("lessc options (seperated by :)")["--options"] => (?options:String) -> {
 				if( options != null ) lessOptions = options.split(':');
 			},
 			["--help","-help","-h"] => () -> exit( 0, usage ),
@@ -106,8 +106,8 @@ class Main {
 			var events = inotify.read();
 			for( e in events ) {
                 if( e.name != null && e.name.extension() == 'less' ) {
-                    if( e.mask & MODIFY > 0 ) {
-                        fileModified = e.name;
+					if( e.mask & MODIFY > 0 ) {
+						fileModified = e.name;
                     } else if( e.mask & CLOSE_WRITE > 0 ) {
                         if( fileModified != null ) {
 							print( DateTools.format( Date.now(), '%H:%M:%S $fileModified / ' ) );
@@ -134,6 +134,23 @@ class Main {
 			println( '✖' );
 			println( result.data );
 			return false;
+		}
+	}
+
+	static function resolveDependencies() : Array<String> {
+		var list = new Array<String>();
+		var result = lessc( lessFile, cssFile, lessOptions.concat(['-M']) );
+		if( result.code == 0 ) {
+			for( f in result.data.split(' ') ) {
+				f = f.trim();
+				if( f.length > 0 ) {
+					list.push( f );
+				}
+			}
+			return list;
+		} else {
+			throw result.data;
+			return null;
 		}
 	}
 

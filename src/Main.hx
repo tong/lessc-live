@@ -48,7 +48,7 @@ class Main {
 				exit( 1, 'Main less file not found: $lessFile' );
 		}
 
-		lessOptions.push( '--include-path='+sourcePaths.join(':') );
+		if( sourcePaths.length > 0 ) lessOptions.push( '--include-path='+sourcePaths.join(':') );
 
 		if( cssFile == null ) {
 			cssFile = lessFile.withoutExtension() + '.css';

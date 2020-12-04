@@ -1,6 +1,4 @@
 
-import Sys.print;
-import Sys.println;
 import sys.FileSystem;
 import sys.io.Inotify;
 
@@ -8,6 +6,9 @@ using StringTools;
 using haxe.io.Path;
 
 class Main {
+
+	static inline var COLOR_ERROR = 31;
+	static inline var COLOR_SUCCESS = 32;
 
 	static var lessFile : String;
 	static var cssFile : String;
@@ -97,7 +98,7 @@ class Main {
 			}
 		}
 		for( path in sourcePaths ) {
-			println( 'Watching: $path' );
+			println( 'Watching $path' );
 			watchDirectory(path);
 		}
 
@@ -110,7 +111,7 @@ class Main {
 						fileModified = e.name;
                     } else if( e.mask & CLOSE_WRITE > 0 ) {
                         if( fileModified != null ) {
-							print( DateTools.format( Date.now(), '%H:%M:%S $fileModified / ' ) );
+							Sys.print( DateTools.format( Date.now(), '%H:%M:%S $fileModified / ' ) );
 							build();
                             fileModified = null;
                         }
@@ -124,15 +125,14 @@ class Main {
 
 	static function build() : Bool {
 		var ts = Sys.time();
-		print( lessFile.withoutDirectory()+' → $cssFile ' );
+		Sys.print( lessFile.withoutDirectory()+' → $cssFile ' );
 		var result = lessc( lessFile, cssFile, lessOptions );
 		if( result.code == 0 ) {
 			var time = Std.int( (Sys.time() - ts) * 1000) / 1000;
-			println( '✔ ${time}s' );
+			printSuccess( '✔ ${time}s' );
 			return true;
 		} else {
-			println( '✖' );
-			println( result.data );
+			printError( '✖\n'+result.data );
 			return false;
 		}
 	}
@@ -165,6 +165,19 @@ class Main {
 		}
 		proc.close();
 		return { code: code, data : result };
+	}
+
+	static inline function printSuccess( str : String ) {
+		println( str, COLOR_SUCCESS );
+	}
+
+	static inline function printError( str : String ) {
+		println( str, COLOR_ERROR );
+	}
+
+	static function println( str : String, ?color : Int ) {
+		if( color != null ) str = '\x1B['+'\033[$color'+'m'+str+'\033[0m';
+		Sys.println( str );
 	}
 
 	static function exit( code = 0, ?info : String ) {
